@@ -1,37 +1,69 @@
 import React, {useEffect, useRef, useState} from "react";
 import {MapContainer,GeoJSON,  Marker, Popup, CircleMarker,TileLayer,LayersControl,LayerGroup} from "react-leaflet";
 import 'leaflet/dist/leaflet.css';
-import L, {LatLngBoundsExpression} from 'leaflet';
+import L, {LatLng, LatLngBoundsExpression} from 'leaflet';
 import type { Map as LeafletMap } from "leaflet";
-const MapView=()=>{
+import {County, Facility, SubCounty} from "./api";
+import * as turf from '@turf/turf'
+
+
+interface FacilityListProps {
+    facilities: Facility[];
+    counties: County[];
+    subCounties: SubCounty[];
+}
+
+
+const MapView:React.FC<FacilityListProps> =({facilities,counties,subCounties})=>{
 
     const [keData, setKeData] = useState(null);
-    const [countyData, setCountyData] = useState(null);
+    const [countyData, setCountyData] = useState<any>(null);
     const [subCountyData, setSubCountyData] = useState(null);
     const mapRef = useRef<LeafletMap | null>(null);
 
-
-    const densityData = {
-        "Nairobi": 6340,
-        "Mombasa": 5287,
-        "Kiambu": 1002,
-        "Turkana": 13
-    };
-
     function getColor(d:any) {
-        return d > 1000 ? '#800026' :
-            d > 500  ? '#BD0026' :
-                d > 200  ? '#E31A1C' :
-                    d > 100  ? '#FC4E2A' :
-                        d > 50   ? '#FD8D3C' :
-                            d > 20   ? '#FEB24C' :
-                                d > 10   ? '#FED976' :
+        return d > 60 ? '#800026' :
+            d > 30 ? '#BD0026' :
+                d > 25  ? '#E31A1C' :
+                    d > 20  ? '#FC4E2A' :
+                        d > 15  ? '#FD8D3C' :
+                            d > 10   ? '#FEB24C' :
+                                d > 5   ? '#FED976' :
                                     '#FFEDA0';
     }
 
-    function style(feature:any) {
+    function countyRateStyle(feature:any) {
+        const ct=counties.filter(x=>x.county.toLowerCase()===feature.properties.shapeName.toLowerCase())[0]?.county;
+        const rate=counties.filter(x=>x.county.toLowerCase()===feature.properties.shapeName.toLowerCase())[0]?.rate;
+
+            const shape = countyData?.features.find(
+                 (feature:any) => feature.properties.shapeName === ct
+             );
+
+
+        if (shape) {
+            const centerPoint = turf.center(shape);
+            const centerCoords = centerPoint.geometry.coordinates;
+            console.log('<<CT>>',centerCoords)
+        }
+
+
+
+
         return {
-            fillColor: getColor(feature.properties.density),
+            fillColor: getColor(rate),
+            weight: 2,
+            opacity: 1,
+            color: 'white',
+            dashArray: '3',
+            fillOpacity: 0.7
+        };
+    }
+
+    function subCountyRateStyle(feature:any) {
+        const rate=subCounties.filter(x=>x.subCounty.toLowerCase()===feature.properties.shapeName.toLowerCase())[0]?.rate;
+        return {
+            fillColor: getColor(rate),
             weight: 2,
             opacity: 1,
             color: 'white',
@@ -42,39 +74,29 @@ const MapView=()=>{
 
     useEffect(() => {
         fetch("/geo/ke.geojson").then((res) => res.json()).then((data) => setKeData(data)).catch((err) => console.error("Country Error:", err));
-        fetch("/geo/county.geojson")
-            .then((res) => res.json())
-            .then(data => {
-                // Add density to each feature
-                data.features.forEach((f:any) => {
-                    const name = f.properties.shapeName
-                    // @ts-ignore
-                    f.properties.density = densityData[name] || 0;
-                });
-                setCountyData(data)
-            })
-            .catch((err) => console.error("County Error:", err));
+        fetch("/geo/county.geojson").then((res) => res.json()).then(data => setCountyData(data)).catch((err) => console.error("County Error:", err));
         fetch("/geo/subcounty.geojson").then((res) => res.json()).then((data) => setSubCountyData(data)).catch((err) => console.error("Sub County Error:", err));
-    }, []);
+    }, [counties]);
 
     const baseStyle = {
-        fillColor: "#444",
+        color:"purple",
         weight: 1,
         opacity: 1,
-        color: "white",
-        fillOpacity: 0.5
+        fillOpacity: 0
     };
 
     const countyStyle = {
         color: "#0077b6",
-        weight: 1.5,
-        fillOpacity: 0.3
+        weight: 1,
+        opacity: 1,
+        fillOpacity: 0
     };
 
     const subcountyStyle = {
         color: "#ff8800",
         weight: 1,
-        fillOpacity: 0.2
+        opacity: 1,
+        fillOpacity: 0
     };
 
     const locations = [
@@ -85,13 +107,6 @@ const MapView=()=>{
         { name: "Nakuru", lat: -0.3031, lng: 36.0800, count: 600 },
         { name: "Garissa", lat: -0.4569, lng: 39.6583, count: 150 },
         { name: "Meru", lat: 0.0471, lng: 37.6559, count: 250 }
-    ];
-
-    const facilities = [
-        { name: "Nairobi Hospital", lat: -1.2921, lng: 36.8219 },
-        { name: "Moi University Hospital", lat: 0.2833, lng: 35.3000 },
-        { name: "Kenyatta University Hospital", lat: -1.1800, lng: 36.9311 },
-        { name: "Jomo Kenyatta Airport Port Health", lat: -1.3192, lng: 36.9278 }
     ];
 
     const facilityIcon = new L.Icon({
@@ -116,41 +131,62 @@ const MapView=()=>{
         layer.bindTooltip(`<strong>${name}</strong>`);
     };
 
+    function getCentre(county: string) {
+
+        const shape = countyData?.features.find(
+            (feature: any) => feature.properties.shapeName.toLowerCase() === county.toLowerCase()
+        );
+
+        if(shape) {
+            const centerPoint = turf.center(shape);
+            const centerCoords = centerPoint.geometry.coordinates;
+            const ll = new LatLng(centerCoords[1], centerCoords[0])
+            console.log('XXXXXX', ll)
+            return ll;
+        }
+        return new LatLng(0,0)
+    }
+
     return <>
         <h1>The Map</h1>
         <MapContainer center={[-1.2921, 36.8219]} zoom={6} scrollWheelZoom={false} style={{ height: '500px', width: '100%' }}>
 
+            <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution="&copy; OpenStreetMap contributors"
+            />
             <LayersControl position="topright">
                 <LayersControl.BaseLayer checked name="OpenStreetMap">
-                    <TileLayer
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        attribution="&copy; OpenStreetMap contributors"
-                    />
+
                     {/* Default country boundary */}
                     {keData && <GeoJSON data={keData} style={baseStyle} />}
                 </LayersControl.BaseLayer>
 
                 <LayersControl.Overlay name="County Boundaries">
-                    {countyData && <GeoJSON data={countyData} style={style} onEachFeature={onEachFeature} />}
+                    {countyData && <GeoJSON data={countyData} style={countyStyle} onEachFeature={onEachFeature} />}
+                </LayersControl.Overlay>
+
+                <LayersControl.Overlay name="County Rates">
+                    {countyData && <GeoJSON data={countyData} style={countyRateStyle} onEachFeature={onEachFeature} />}
                 </LayersControl.Overlay>
 
                 <LayersControl.Overlay name="Subcounty Boundaries">
                     {subCountyData && <GeoJSON data={subCountyData} style={subcountyStyle} />}
                 </LayersControl.Overlay>
 
-                <LayersControl.Overlay checked name="Population Bubbles">
+                <LayersControl.Overlay name="Subcounty Rates">
+                    {subCountyData && <GeoJSON data={subCountyData} style={subCountyRateStyle} onEachFeature={onEachFeature} />}
+                </LayersControl.Overlay>
+
+                <LayersControl.Overlay checked name="County Bubbles">
                     <LayerGroup>
-                        {locations.map((loc, idx) => (
+                        {counties.map((loc, idx:number) => (
                             <CircleMarker
                                 key={idx}
-                                center={[loc.lat, loc.lng]}
-                                radius={Math.sqrt(loc.count) * 0.4}
+                                center={getCentre(loc.county)}
+                                radius={Math.sqrt(loc.count) * 10}
                                 pathOptions={{ color: "blue", fillColor: "skyblue", fillOpacity: 0.5 }}
                             >
-                                <Popup>
-                                    <strong>{loc.name}</strong><br />
-                                    Count: {loc.count}
-                                </Popup>
                             </CircleMarker>
                         ))}
                     </LayerGroup>
@@ -159,9 +195,9 @@ const MapView=()=>{
                 <LayersControl.Overlay checked name="Facilities">
                     <LayerGroup>
                         {facilities.map((loc, i) => (
-                            <Marker key={i} position={[loc.lat, loc.lng]} icon={facilityIcon}>
+                            <Marker key={i} position={[loc.lat, loc.long]} icon={facilityIcon}>
                                 <Popup>
-                                    <strong>{loc.name}</strong>
+                                    <strong>{loc.facilityName}</strong>
                                 </Popup>
                             </Marker>
                         ))}
