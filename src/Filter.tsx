@@ -9,7 +9,7 @@ import {
     fetchRegionFilters,
     fetchSexFilters
 } from "./filter.api";
-
+import {DatePicker, Select} from "antd";
 const Filter:React.FC = () => {
     const {
         indicators, setIndicators, selectedIndicator, setSelectedIndicator,
@@ -95,121 +95,109 @@ const Filter:React.FC = () => {
     if (agesError) return <div>Error loading Ages Filters: {agesError.message}</div>;
 
 
-    const handleSexChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const options = Array.from(e.target.selectedOptions).map(option => option.value);
+    const handleSexChange = (options:any) => {
         setSelectedSex(options);
     };
-    const handleAgeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const options = Array.from(e.target.selectedOptions).map(option => option.value);
+    const handleAgeChange = (options:any) => {
         setSelectedAge(options);
     };
-    const handleCountyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const options = Array.from(e.target.selectedOptions).map(option => option.value);
+    const handleCountyChange = (options:any) => {
         setSelectedCounty(options);
     };
 
-    const handleSubCountyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const options = Array.from(e.target.selectedOptions).map(option => option.value);
+    const handleSubCountyChange = (options:any) => {
         setSelectedSubCounty(options);
     };
 
-    const handleFacChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const options = Array.from(e.target.selectedOptions).map(option => option.value);
+    const handleFacChange = (options:any) => {
         setSelectedFacilityName(options);
     };
 
-    const handleAgencyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const options = Array.from(e.target.selectedOptions).map(option => option.value);
+    const handleAgencyChange = (options:any) => {
         setSelectedAgency(options);
     };
 
-    const handlePartnerChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const options = Array.from(e.target.selectedOptions).map(option => option.value);
+    const handlePartnerChange = (options:any) => {
         setSelectedPartnerName(options);
     };
 
+    const handleRangeChange = (dates: any) => {
+        if (dates) {
+            const [start, end] = dates;
+            setStartPeriod(start)
+            setEndPeriod(end)
+        }
+    };
 
+    const { Option } = Select;
+    const { RangePicker } = DatePicker;
 
     return (
         <div>
-            <h5>Filters</h5>
+            Indicator:
+            <Select style={{width: '100%'}} placeholder="Select Indicator"
+                    onChange={(e) => setSelectedIndicator({name: e})}>
+                {indicators.map((indicator, i) => (
+                    <Option key={i} value={indicator.name}>{indicator.name}</Option>
+                ))}
+            </Select>
             <br/>
-            <label>
-                Select Indicator:
-                <select value={selectedIndicator.name} onChange={(e) => setSelectedIndicator({name: e.target.value})}>
-                    {indicators.map((indicator, i) => (
-                        <option key={i} value={indicator.name}>{indicator.name}</option>
-                    ))}
-                </select>
-            </label>
+            Period:
+            <RangePicker onChange={handleRangeChange}/>
             <br/>
+            County:
+            <Select value={selectedCounty} mode="multiple" allowClear style={{width: '100%'}} placeholder="Select County"
+                    onChange={handleCountyChange}>
+                {countys.map((county, i) => (<Option key={i} value={county}>{county}</Option>))}
+            </Select>
 
-            <h2>Select Date Range :</h2>
-            <label>Start Date:</label>
-            <input type="date" id="start-date" value={startPeriod} name="start-date" onChange={(e)=>setStartPeriod(e.target.value)}/>
+            <br/>
+            Sub County:
+            <Select mode="multiple" allowClear style={{width: '100%'}} placeholder="Select Sub County"
+                    onChange={handleSubCountyChange}>
+                {subCountys.map((subCounty, i) => (<Option key={i} value={subCounty}>{subCounty}</Option>))}
+            </Select>
+            <br/>
+            Select Faciltiy:
+            <Select value={selectedFacilityName} onChange={handleFacChange} mode="multiple" allowClear
+                    style={{width: '100%'}} placeholder="Select County">
+                {facilityNames.map((fac, i) => (
+                    <Option key={i} value={fac}>{fac}</Option>
+                ))}
+            </Select>
+            <br/>
+            Select Sex:
+            <Select value={selectedSex} onChange={handleSexChange} mode="multiple" allowClear style={{width: '100%'}}
+                    placeholder="Select County">
+                {sexs.map((sex, i) => (
+                    <Option key={i} value={sex.sex}>{sex.sex}</Option>
+                ))}
+            </Select>
+            <br/>
+            Age:
+            <Select value={selectedAge} onChange={handleAgeChange} mode="multiple" allowClear style={{width: '100%'}}
+                    placeholder="Select Age">
+                {ages.map((age, i) => (
+                    <Option key={i} value={age.ageGroup}>{age.ageGroup}</Option>
+                ))}
+            </Select>
+            <br/>
+            Agency:
+            <Select value={selectedAgency} onChange={handleAgencyChange} mode="multiple" allowClear
+                    style={{width: '100%'}} placeholder="Select Agency">
+                {agencys.map((agency, i) => (
+                    <Option key={i} value={agency}>{agency}</Option>
+                ))}
+            </Select>
 
-            <label>End Date:</label>
-            <input type="date" id="end-date" name="end-date" value={endPeriod} onChange={(e)=>setEndPeriod(e.target.value)}/>
             <br/>
-            <label>
-                Select County:
-                <select value={selectedCounty} onChange={handleCountyChange} multiple>
-                    {countys.map((county, i) => (
-                        <option key={i} value={county}>{county}</option>
-                    ))}
-                </select>
-            </label>
-            <label>
-                Select Sub County:
-                <select value={selectedSubCounty} onChange={handleSubCountyChange} multiple>
-                    {subCountys.map((subCounty, i) => (
-                        <option key={i} value={subCounty}>{subCounty}</option>
-                    ))}
-                </select>
-            </label>
-            <label>
-                Select Faciltiy:
-                <select value={selectedFacilityName} onChange={handleFacChange} multiple>
-                    {facilityNames.map((fac, i) => (
-                        <option key={i} value={fac}>{fac}</option>
-                    ))}
-                </select>
-            </label>
-            <br/>
-            <label>
-                Select Sex:
-                <select value={selectedSex} onChange={handleSexChange} multiple>
-                    {sexs.map((sex, i) => (
-                        <option key={i} value={sex.sex}>{sex.sex}</option>
-                    ))}
-                </select>
-            </label>
-            <br/>
-            <label>
-                Select Age:
-                <select value={selectedAge} onChange={handleAgeChange} multiple>
-                    {ages.map((age, i) => (
-                        <option key={i} value={age.ageGroup}>{age.ageGroup}</option>
-                    ))}
-                </select>
-            </label>
-            <br/>
-            <label>
-                Select Agency:
-                <select value={selectedAgency} onChange={handleAgencyChange} multiple>
-                    {agencys.map((agency, i) => (
-                        <option key={i} value={agency}>{agency}</option>
-                    ))}
-                </select>
-            </label>
-            <label>
-                Select Partner:
-                <select value={selectedPartnerName} onChange={handlePartnerChange} multiple>
-                    {partnerNames.map((fac, i) => (
-                        <option key={i} value={fac}>{fac}</option>
-                    ))}
-                </select>
-            </label>
+            Partner:
+            <Select value={selectedPartnerName} onChange={handlePartnerChange} mode="multiple" allowClear
+                    style={{width: '100%'}} placeholder="Select Partner">
+                {partnerNames.map((fac, i) => (
+                    <Option key={i} value={fac}>{fac}</Option>
+                ))}
+            </Select>
         </div>
     );
 };
