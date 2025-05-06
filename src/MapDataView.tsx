@@ -1,25 +1,46 @@
 import React, {useEffect, useRef, useState} from "react";
-import {MapContainer,GeoJSON,  Marker, Popup, CircleMarker,TileLayer,LayersControl,LayerGroup} from "react-leaflet";
+import {
+    MapContainer,
+    GeoJSON,
+    Marker,
+    Popup,
+    CircleMarker,
+    TileLayer,
+    LayersControl,
+    LayerGroup,
+    useMap
+} from "react-leaflet";
 import 'leaflet/dist/leaflet.css';
 import L, {LatLng, LatLngBoundsExpression} from 'leaflet';
 import type { Map as LeafletMap } from "leaflet";
-import {County, Facility, SubCounty} from "./api";
 import * as turf from '@turf/turf'
+import {useQuery} from "@tanstack/react-query";
+import {fetchSexFilters} from "./filter.api";
+import {fetchIndicatorData} from "./data.api";
+import useStore from "./store";
 
 
-interface FacilityListProps {
-    facilities: Facility[];
-    counties: County[];
-    subCounties: SubCounty[];
-}
+const MapDataView:React.FC =()=>{
 
-
-const MapView:React.FC<FacilityListProps> =({facilities,counties,subCounties})=>{
+    const mapRef = useRef<LeafletMap | null>(null);
 
     const [keData, setKeData] = useState(null);
     const [countyData, setCountyData] = useState<any>(null);
     const [subCountyData, setSubCountyData] = useState(null);
-    const mapRef = useRef<LeafletMap | null>(null);
+
+    useEffect(() => {
+        fetch("/geo/ke.geojson").then((res) => res.json()).then((data) => setKeData(data)).catch((err) => console.error("Country Error:", err));
+        fetch("/geo/county.geojson").then((res) => res.json()).then(data => setCountyData(data)).catch((err) => console.error("County Error:", err));
+        fetch("/geo/subcounty.geojson").then((res) => res.json()).then((data) => setSubCountyData(data)).catch((err) => console.error("Sub County Error:", err));
+    }, []);
+
+    const {filter} = useStore();
+
+    const { data, error, isLoading } = useQuery({
+        queryKey:['IndicatorData',filter],
+        queryFn:()=> fetchIndicatorData(filter),
+        enabled:!!filter
+    });
 
     function getColor(d:any) {
         return d > 60 ? '#800026' :
@@ -33,13 +54,10 @@ const MapView:React.FC<FacilityListProps> =({facilities,counties,subCounties})=>
     }
 
     function countyRateStyle(feature:any) {
-        const ct=counties.filter(x=>x.county.toLowerCase()===feature.properties.shapeName.toLowerCase())[0]?.county;
-        const rate=counties.filter(x=>x.county.toLowerCase()===feature.properties.shapeName.toLowerCase())[0]?.rate;
+        const ct=data?.countyPoints?.filter(x=>x.county?.toLowerCase()===feature.properties.shapeName.toLowerCase())[0]?.county;
+        const rate=data?.countyPoints?.filter(x=>x.county?.toLowerCase()===feature.properties.shapeName.toLowerCase())[0]?.rate;
 
-            const shape = countyData?.features.find(
-                 (feature:any) => feature.properties.shapeName === ct
-             );
-
+        const shape = countyData?.features.find((feature:any) => feature.properties.shapeName === ct);
 
         if (shape) {
             const centerPoint = turf.center(shape);
@@ -47,36 +65,29 @@ const MapView:React.FC<FacilityListProps> =({facilities,counties,subCounties})=>
             console.log('<<CT>>',centerCoords)
         }
 
-
-
-
         return {
             fillColor: getColor(rate),
             weight: 2,
             opacity: 1,
             color: 'white',
             dashArray: '3',
-            fillOpacity: 0.7
+            fillOpacity: rate&&rate>0? 0.7:0
         };
     }
 
     function subCountyRateStyle(feature:any) {
-        const rate=subCounties.filter(x=>x.subCounty.toLowerCase()===feature.properties.shapeName.toLowerCase())[0]?.rate;
+        const rate=data?.subCountyPoints?.filter(x=>x.subCounty?.toLowerCase()===feature.properties.shapeName.toLowerCase())[0]?.rate;
         return {
             fillColor: getColor(rate),
             weight: 2,
             opacity: 1,
             color: 'white',
             dashArray: '3',
-            fillOpacity: 0.7
+            fillOpacity: rate && rate > 0 ? 0.7 : 0
         };
     }
 
-    useEffect(() => {
-        fetch("/geo/ke.geojson").then((res) => res.json()).then((data) => setKeData(data)).catch((err) => console.error("Country Error:", err));
-        fetch("/geo/county.geojson").then((res) => res.json()).then(data => setCountyData(data)).catch((err) => console.error("County Error:", err));
-        fetch("/geo/subcounty.geojson").then((res) => res.json()).then((data) => setSubCountyData(data)).catch((err) => console.error("Sub County Error:", err));
-    }, [counties]);
+
 
     const baseStyle = {
         color:"purple",
@@ -123,7 +134,7 @@ const MapView:React.FC<FacilityListProps> =({facilities,counties,subCounties})=>
             click: () => {
                 const bounds: LatLngBoundsExpression = layer.getBounds();
                 if (mapRef.current) {
-                    mapRef.current.fitBounds(bounds, { padding: [20, 20] });
+                    mapRef.current.fitBounds(bounds);
                 }
             }
         });
@@ -141,15 +152,55 @@ const MapView:React.FC<FacilityListProps> =({facilities,counties,subCounties})=>
             const centerPoint = turf.center(shape);
             const centerCoords = centerPoint.geometry.coordinates;
             const ll = new LatLng(centerCoords[1], centerCoords[0])
-            console.log('XXXXXX', ll)
             return ll;
         }
         return new LatLng(0,0)
     }
 
+
+    const Legend = () => {
+        const map = useMap();
+
+        useEffect(() => {
+            // @ts-ignore
+            const legend = L.control({ position: 'bottomright' });
+
+            legend.onAdd = function () {
+                const div = L.DomUtil.create('div', 'info legend');
+                const grades = [0, 10, 30, 50, 70, 80, 100];
+                let labels = [];
+
+                // loop through our density intervals and generate a label with a colored square for each interval
+                for (let i = 0; i < grades.length; i++) {
+                    div.innerHTML +=
+                        '<i style="background:' + getColor(grades[i] + 1) + '"></i> ' +
+                        grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '%');
+                }
+
+                return div;
+            };
+
+            legend.addTo(map);
+
+
+// Cleanup function to remove the legend
+            return () => {
+                map.removeControl(legend);
+            };
+
+        }, [map]);
+
+        return null;
+    };
+
+
+
+
+    if (isLoading) return <div>Loading ...</div>;
+    if (error) return <div>Error loading: {error.message}</div>;
+
     return <>
-        <h1>The Map</h1>
-        <MapContainer center={[-1.2921, 36.8219]} zoom={6} scrollWheelZoom={false} style={{ height: '500px', width: '100%' }}>
+        <MapContainer center={[-1.2921, 36.8219]} zoom={6} scrollWheelZoom={false} style={{ height: '800px', width: '100%' }}>
 
             <TileLayer
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -166,7 +217,7 @@ const MapView:React.FC<FacilityListProps> =({facilities,counties,subCounties})=>
                     {countyData && <GeoJSON data={countyData} style={countyStyle} onEachFeature={onEachFeature} />}
                 </LayersControl.Overlay>
 
-                <LayersControl.Overlay name="County Rates">
+                <LayersControl.Overlay name="County Rates" checked>
                     {countyData && <GeoJSON data={countyData} style={countyRateStyle} onEachFeature={onEachFeature} />}
                 </LayersControl.Overlay>
 
@@ -178,24 +229,29 @@ const MapView:React.FC<FacilityListProps> =({facilities,counties,subCounties})=>
                     {subCountyData && <GeoJSON data={subCountyData} style={subCountyRateStyle} onEachFeature={onEachFeature} />}
                 </LayersControl.Overlay>
 
-                <LayersControl.Overlay checked name="County Bubbles">
+                <LayersControl.Overlay name="County Bubbles">
                     <LayerGroup>
-                        {counties.map((loc, idx:number) => (
+                        {data?.countyPoints?.map((loc, idx:number) => (
                             <CircleMarker
                                 key={idx}
-                                center={getCentre(loc.county)}
-                                radius={Math.sqrt(loc.count) * 10}
+                                center={getCentre(loc.county!)}
+                                radius={Math.sqrt(loc.count!) * 10}
                                 pathOptions={{ color: "blue", fillColor: "skyblue", fillOpacity: 0.5 }}
                             >
+                                <Popup>
+                                    <strong>{loc.county}</strong><br/>
+                                    <strong>Count:{loc.count}</strong><br/>
+                                    <strong>Rate:{loc.rate}</strong>
+                                </Popup>
                             </CircleMarker>
                         ))}
                     </LayerGroup>
                 </LayersControl.Overlay>
 
-                <LayersControl.Overlay checked name="Facilities">
+                <LayersControl.Overlay name="Facilities">
                     <LayerGroup>
-                        {facilities.map((loc, i) => (
-                            <Marker key={i} position={[loc.lat, loc.long]} icon={facilityIcon}>
+                        {data?.facilityPoints?.map((loc, i) => (
+                            <Marker key={i} position={[loc.lat!, loc.long!]} icon={facilityIcon}>
                                 <Popup>
                                     <strong>{loc.facilityName}</strong>
                                 </Popup>
@@ -203,9 +259,29 @@ const MapView:React.FC<FacilityListProps> =({facilities,counties,subCounties})=>
                         ))}
                     </LayerGroup>
                 </LayersControl.Overlay>
+
+                <LayersControl.Overlay name="Facility Bubbles">
+                    <LayerGroup>
+                        {data?.facilityPoints?.map((loc, idx:number) => (
+                            <CircleMarker
+                                key={idx}
+                                center={[loc.lat!, loc.long!]}
+                                radius={Math.sqrt(loc.count!) * 4}
+                                pathOptions={{ color: "blue", fillColor: "purple", fillOpacity: 0.5 }}
+                            >
+                                <Popup>
+                                    <strong>{loc.facilityName}</strong><br/>
+                                    <strong>Count:{loc.count}</strong><br/>
+                                    <strong>Rate:{loc.rate}</strong>
+                                </Popup>
+                            </CircleMarker>
+                        ))}
+                    </LayerGroup>
+                </LayersControl.Overlay>
             </LayersControl>
+            <Legend />
         </MapContainer>
     </>
 }
 
-export default MapView
+export default MapDataView
