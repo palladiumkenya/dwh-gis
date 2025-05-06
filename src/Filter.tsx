@@ -95,6 +95,10 @@ const Filter:React.FC = () => {
     if (agesError) return <div>Error loading Ages Filters: {agesError.message}</div>;
 
 
+    const handleIndicatorChange = (name:string) => {
+        setSelectedIndicator(name);
+    };
+
     const handleSexChange = (options:any) => {
         setSelectedSex(options);
     };
@@ -135,8 +139,8 @@ const Filter:React.FC = () => {
     return (
         <div>
             Indicator:
-            <Select style={{width: '100%'}} placeholder="Select Indicator"
-                    onChange={(e) => setSelectedIndicator({name: e})}>
+            <Select value={selectedIndicator} style={{width: '100%'}} placeholder="Select Indicator"
+                    onChange={handleIndicatorChange}>
                 {indicators.map((indicator, i) => (
                     <Option key={i} value={indicator.name}>{indicator.name}</Option>
                 ))}
@@ -153,7 +157,7 @@ const Filter:React.FC = () => {
 
             <br/>
             Sub County:
-            <Select mode="multiple" allowClear style={{width: '100%'}} placeholder="Select Sub County"
+            <Select mode="multiple" allowClear style={{width: '100%'}} placeholder="Select Sub County" value={selectedSubCounty}
                     onChange={handleSubCountyChange}>
                 {subCountys.map((subCounty, i) => (<Option key={i} value={subCounty}>{subCounty}</Option>))}
             </Select>

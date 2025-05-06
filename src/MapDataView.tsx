@@ -1,5 +1,15 @@
 import React, {useEffect, useRef, useState} from "react";
-import {MapContainer,GeoJSON,  Marker, Popup, CircleMarker,TileLayer,LayersControl,LayerGroup} from "react-leaflet";
+import {
+    MapContainer,
+    GeoJSON,
+    Marker,
+    Popup,
+    CircleMarker,
+    TileLayer,
+    LayersControl,
+    LayerGroup,
+    useMap
+} from "react-leaflet";
 import 'leaflet/dist/leaflet.css';
 import L, {LatLng, LatLngBoundsExpression} from 'leaflet';
 import type { Map as LeafletMap } from "leaflet";
@@ -147,6 +157,45 @@ const MapDataView:React.FC =()=>{
         return new LatLng(0,0)
     }
 
+
+    const Legend = () => {
+        const map = useMap();
+
+        useEffect(() => {
+            // @ts-ignore
+            const legend = L.control({ position: 'bottomright' });
+
+            legend.onAdd = function () {
+                const div = L.DomUtil.create('div', 'info legend');
+                const grades = [0, 10, 30, 50, 70, 80, 100];
+                let labels = [];
+
+                // loop through our density intervals and generate a label with a colored square for each interval
+                for (let i = 0; i < grades.length; i++) {
+                    div.innerHTML +=
+                        '<i style="background:' + getColor(grades[i] + 1) + '"></i> ' +
+                        grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '%');
+                }
+
+                return div;
+            };
+
+            legend.addTo(map);
+
+
+// Cleanup function to remove the legend
+            return () => {
+                map.removeControl(legend);
+            };
+
+        }, [map]);
+
+        return null;
+    };
+
+
+
+
     if (isLoading) return <div>Loading ...</div>;
     if (error) return <div>Error loading: {error.message}</div>;
 
@@ -230,6 +279,7 @@ const MapDataView:React.FC =()=>{
                     </LayerGroup>
                 </LayersControl.Overlay>
             </LayersControl>
+            <Legend />
         </MapContainer>
     </>
 }

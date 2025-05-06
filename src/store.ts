@@ -6,8 +6,8 @@ import {IndicatorData} from "./data.api";
 interface StoreState {
     indicators: Indicator[];
     setIndicators: (indicators: Indicator[]) => void;
-    selectedIndicator: Indicator;
-    setSelectedIndicator: (indicator: Indicator) => void;
+    selectedIndicator: string;
+    setSelectedIndicator: (indicator: string) => void;
 
 
     startPeriod: string;
@@ -68,10 +68,10 @@ const useStore = create<StoreState>()(
         (set, get) => ({
             indicators: [],
             setIndicators: (indicators) => set({indicators}),
-            selectedIndicator: ({name: 'HIV POSITIVE NOT LINKED'}),
+            selectedIndicator: ('HIV POSITIVE NOT LINKED'),
             setSelectedIndicator: (indicator) => {
                 set({selectedIndicator: indicator});
-                set({filter: {...get().filter, indicator: indicator.name}});
+                set({filter: {...get().filter, indicator: indicator}});
             },
 
             startPeriod: '',
