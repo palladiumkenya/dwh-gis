@@ -168,7 +168,7 @@ const MapDataView:React.FC =()=>{
                     {countyData && <GeoJSON data={countyData} style={countyStyle} onEachFeature={onEachFeature} />}
                 </LayersControl.Overlay>
 
-                <LayersControl.Overlay name="County Rates">
+                <LayersControl.Overlay name="County Rates" checked>
                     {countyData && <GeoJSON data={countyData} style={countyRateStyle} onEachFeature={onEachFeature} />}
                 </LayersControl.Overlay>
 
@@ -190,8 +190,8 @@ const MapDataView:React.FC =()=>{
                                 pathOptions={{ color: "blue", fillColor: "skyblue", fillOpacity: 0.5 }}
                             >
                                 <Popup>
-                                    <strong>{loc.county}</strong>
-                                    <strong>Count:{loc.count}</strong>
+                                    <strong>{loc.county}</strong><br/>
+                                    <strong>Count:{loc.count}</strong><br/>
                                     <strong>Rate:{loc.rate}</strong>
                                 </Popup>
                             </CircleMarker>
@@ -221,8 +221,8 @@ const MapDataView:React.FC =()=>{
                                 pathOptions={{ color: "blue", fillColor: "purple", fillOpacity: 0.5 }}
                             >
                                 <Popup>
-                                    <strong>{loc.facilityName}</strong>
-                                    <strong>Count:{loc.count}</strong>
+                                    <strong>{loc.facilityName}</strong><br/>
+                                    <strong>Count:{loc.count}</strong><br/>
                                     <strong>Rate:{loc.rate}</strong>
                                 </Popup>
                             </CircleMarker>

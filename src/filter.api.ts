@@ -32,25 +32,26 @@ export interface FilterBody {
     partnerName?: string[]
 }
 
+const apiUrl = process.env.REACT_APP_API_URL;
 
 const fetchIndicatorFilters = async (): Promise<Indicator[]> => {
-    const response = await axios.get('https://localhost:7119/api/CsFilter/Indicator');
+    const response = await axios.get(`${apiUrl}/api/CsFilter/Indicator`);
     return response.data;
 };
 const fetchRegionFilters = async (): Promise<Region[]> => {
-    const response = await axios.get('https://localhost:7119/api/CsFilter/Region');
+    const response = await axios.get(`${apiUrl}/api/CsFilter/Region`);
     return response.data;
 };
 const fetchAgencyFilters= async (): Promise<Agency[]> => {
-    const response = await axios.get('https://localhost:7119/api/CsFilter/Agency');
+    const response = await axios.get(`${apiUrl}/api/CsFilter/Agency`);
     return response.data;
 };
 const fetchSexFilters = async (): Promise<Sex[]> => {
-    const response = await axios.get('https://localhost:7119/api/CsFilter/Sex');
+    const response = await axios.get(`${apiUrl}/api/CsFilter/Sex`);
     return response.data;
 };
 const fetchAgeFilters = async (): Promise<Age[]> => {
-    const response = await axios.get('https://localhost:7119/api/CsFilter/Age');
+    const response = await axios.get(`${apiUrl}/api/CsFilter/Age`);
     return response.data;
 };
 

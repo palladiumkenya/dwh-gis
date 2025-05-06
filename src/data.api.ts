@@ -28,9 +28,9 @@ export interface FacilityPoint {
     count?: number
     rate?: number
 }
-
+const apiUrl = process.env.REACT_APP_API_URL;
 const fetchIndicatorData = async (filterBody: FilterBody): Promise<IndicatorData> => {
-    const response = await axios.post(`https://localhost:7119/api/CsRealtimePoint/All`,filterBody);
+    const response = await axios.post(`${apiUrl}/api/CsRealtimePoint/All`,filterBody);
     return response.data;
 };
 
